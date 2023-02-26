@@ -4,7 +4,8 @@ on:
     paths:
       - 'dynamodb-table.yaml'
       - 's3-bucket.yaml'
-      - 'export-dynamodb-to-s3.yml'
+      - 'export-dynamodb-to-s3.yaml'
+  dispatch:
 jobs:
   export:
     runs-on: ubuntu-latest
@@ -34,3 +35,4 @@ jobs:
             --stack-name my-demo-stack \
             --capabilities CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset
+
