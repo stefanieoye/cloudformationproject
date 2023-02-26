@@ -1,0 +1,36 @@
+name: Export DynamoDB to S3
+on:
+  push:
+    paths:
+      - 'dynamodb-table.yaml'
+      - 's3-bucket.yaml'
+      - 'export-dynamodb-to-s3.yml'
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Deploy CloudFormation stack
+        run: |
+          aws cloudformation deploy \
+            --template-file dynamodb-table.yaml \
+            --stack-name my-demo-stack \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --no-fail-on-empty-changeset
+          aws cloudformation deploy \
+            --template-file s3-bucket.yaml \
+            --stack-name my-demo-stack \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --no-fail-on-empty-changeset
+          aws cloudformation deploy \
+            --template-file export-dynamodb-to-s3.yaml \
+            --stack-name my-demo-stack \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --no-fail-on-empty-changeset
