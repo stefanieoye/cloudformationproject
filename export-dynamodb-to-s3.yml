@@ -1,0 +1,91 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  MyFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: my-function
+      Handler: index.handler
+      Role: !GetAtt MyRole.Arn
+      Code:
+        ZipFile: |
+          exports.handler = async (event) => {
+            const AWS = require('aws-sdk');
+            const dynamoDB = new AWS.DynamoDB();
+            const s3 = new AWS.S3();
+            const tableName = 'my-receeve-name';
+            const bucketName = 'my-receeveb-name';
+            const timestamp = new Date().toISOString();
+            const key = `${tableName}-${timestamp}.json`;
+
+            const scanParams = {
+              TableName: tableName
+            };
+
+            try {
+              const data = await dynamoDB.scan(scanParams).promise();
+              const jsonData = JSON.stringify(data);
+              const putParams = {
+                Bucket: bucketName,
+                Key: key,
+                Body: jsonData
+              };
+              await s3.putObject(putParams).promise();
+              console.log(`Exported ${tableName} to ${bucketName}/${key}`);
+            } catch (err) {
+              console.error(err);
+            }
+          };
+      Runtime: nodejs14.x
+      Timeout: 30
+  MyRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: "DynamoDBPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "dynamodb:Scan"
+                Resource: !GetAtt MyTable.Arn
+        - PolicyName: "S3Policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "s3:PutObject"
+                Resource: !Sub "arn:aws:s3:::${MyBucket}/*"
+  MyTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: my-receeve-name
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+  MyBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: my-receeveb-name
+  MyEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: daily-export-rule
+      ScheduleExpression: "cron(0 2 * * ? *)"
+      Targets:
+        - Id: "target-lambda"
+          Arn: !GetAtt MyFunction.Arn
+
