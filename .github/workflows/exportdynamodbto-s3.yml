@@ -5,7 +5,7 @@ on:
       - 'dynamodb-table.yaml'
       - 's3-bucket.yaml'
       - 'export-dynamodb-to-s3.yaml'
-  dispatch:
+  workflow_dispatch:
 jobs:
   export:
     runs-on: ubuntu-latest
